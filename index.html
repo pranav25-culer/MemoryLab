@@ -1,0 +1,1813 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MemoryLab | Interactive Memory Hierarchy</title>
+
+<style>
+:root {
+    --bg: #0b1020;
+    --panel: #18233e;
+    --border: #334466;
+    --blue: #7dd3fc;
+    --muted: #a8b6cc;
+    --green: #86efac;
+    --red: #fca5a5;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: var(--bg);
+    color: #e2e8f0;
+    line-height: 1.6;
+}
+
+header {
+    text-align: center;
+    padding: 38px 16px;
+    background: #151d35;
+    border-bottom: 1px solid var(--border);
+}
+
+header h1 {
+    color: var(--blue);
+    margin: 0;
+    font-size: clamp(30px, 5vw, 44px);
+}
+
+header p { color: var(--muted); }
+
+nav {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px;
+    padding: 12px;
+    background: #10182c;
+    border-bottom: 1px solid var(--border);
+}
+
+nav a {
+    color: var(--blue);
+    text-decoration: none;
+    padding: 5px 10px;
+}
+
+nav a:hover { text-decoration: underline; }
+
+main {
+    max-width: 1100px;
+    padding: 20px;
+    margin: auto;
+}
+
+.card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 22px;
+    margin: 22px 0;
+}
+
+h2 { color: var(--blue); margin-top: 0; }
+h3 { color: #bae6fd; }
+p { color: #d0d9e8; }
+.muted { color: var(--muted); }
+
+button, select, input {
+    padding: 11px 13px;
+    margin: 5px 4px 5px 0;
+    border-radius: 7px;
+    border: 1px solid #526482;
+    font-size: 14px;
+    font-family: inherit;
+}
+
+button {
+    background: #0284c7;
+    color: white;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+button:hover { background: #0369a1; }
+
+button.secondary { background: #475569; }
+button.secondary:hover { background: #64748b; }
+
+button:focus-visible,
+select:focus-visible,
+input:focus-visible,
+a:focus-visible {
+    outline: 2px solid var(--blue);
+    outline-offset: 3px;
+}
+
+button:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+select, input {
+    color: white;
+    background: #0b1020;
+    max-width: 100%;
+}
+
+label { display: inline-block; margin-top: 8px; }
+
+/* =========================================
+   INTERACTIVE MEMORY HIERARCHY
+========================================= */
+
+.hierarchy-level {
+    width: 78%;
+    max-width: 540px;
+    margin: 0 auto;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    text-align: center;
+    border: 1px solid #526482;
+    border-radius: 10px;
+    gap: 4px;
+    cursor: pointer;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.hierarchy-level span {
+    font-size: 13px;
+    color: #e0f2fe;
+}
+
+.hierarchy-level small { color: #cbd5e1; }
+
+.hierarchy-level:hover,
+.hierarchy-level:focus-visible {
+    border-color: var(--blue);
+    outline: 2px solid var(--blue);
+    outline-offset: 3px;
+}
+
+.hierarchy-level[aria-expanded="true"] {
+    border-color: var(--blue);
+    box-shadow: 0 0 0 2px #7dd3fc22;
+}
+
+.cpu { background: #312e81; }
+.registers { background: #164e63; }
+.cache-level { background: #075985; }
+.ram { background: #365314; }
+.storage { background: #713f12; }
+
+.level-heading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    font-weight: bold;
+    font-size: 17px;
+}
+
+.level-icon {
+    display: inline-block;
+    transition: transform 0.2s;
+}
+
+.hierarchy-level[aria-expanded="true"] .level-icon {
+    transform: rotate(180deg);
+}
+
+.arrow {
+    text-align: center;
+    font-size: 24px;
+    color: var(--blue);
+    line-height: 1.5;
+}
+
+.inline-details {
+    width: 78%;
+    max-width: 540px;
+    margin: 0 auto 12px;
+    padding: 18px;
+    background: #0b1020;
+    border: 1px solid #38bdf8;
+    border-radius: 10px;
+    animation: revealDetails 0.2s ease-out;
+}
+
+.inline-details h3 {
+    color: var(--blue);
+    margin: 0 0 10px;
+}
+
+.inline-details p {
+    margin: 8px 0;
+    overflow-wrap: anywhere;
+}
+
+.inline-details strong { color: #bae6fd; }
+
+@keyframes revealDetails {
+    from { opacity: 0; transform: translateY(-5px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.note {
+    font-size: 13px;
+    text-align: center;
+    color: var(--muted);
+    margin-top: 16px;
+}
+
+/* =========================================
+   GUIDED WALKTHROUGH
+========================================= */
+
+.guide-card {
+    background: linear-gradient(135deg, #182b4b, #18233e);
+    border: 1px solid #41648d;
+}
+
+.guide-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.guide-top h2 { margin-bottom: 8px; }
+
+.guide-progress {
+    height: 7px;
+    width: 100%;
+    background: #0b1020;
+    border-radius: 99px;
+    overflow: hidden;
+    margin: 12px 0 18px;
+}
+
+.guide-progress-bar {
+    height: 100%;
+    width: 25%;
+    background: var(--blue);
+    border-radius: 99px;
+    transition: width 0.25s ease;
+}
+
+.guide-step-label {
+    color: var(--blue);
+    font-size: 13px;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 0.7px;
+}
+
+.guide-content {
+    background: #0b1020;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 18px;
+    margin: 14px 0;
+}
+
+.guide-content h3 { margin-top: 0; }
+
+.guide-content p:last-child { margin-bottom: 0; }
+
+.guide-action {
+    border: 1px solid #3b82a8;
+    background: #10253c;
+    border-radius: 9px;
+    padding: 12px;
+    margin-top: 14px;
+}
+
+.guide-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin-top: 14px;
+}
+
+.guide-actions button { margin: 0; }
+
+.guide-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+    color: var(--muted);
+    font-size: 13px;
+    margin-top: 12px;
+}
+
+.guide-complete {
+    color: var(--green);
+    font-weight: bold;
+}
+
+/* Highlight the control being demonstrated */
+
+.guide-highlight {
+    outline: 3px solid var(--blue) !important;
+    outline-offset: 4px;
+    box-shadow: 0 0 18px #38bdf855 !important;
+    position: relative;
+    z-index: 2;
+}
+
+/* =========================================
+   CACHE SIMULATOR
+========================================= */
+
+#result {
+    padding: 12px;
+    background: #0b1020;
+    border-radius: 8px;
+    color: var(--blue);
+    overflow-wrap: anywhere;
+}
+
+#explanation { min-height: 28px; }
+
+.cache-contents {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 9px;
+    margin: 12px 0;
+}
+
+.cache-block {
+    padding: 10px 15px;
+    border-radius: 8px;
+    background: #164e63;
+    border: 1px solid #22d3ee;
+    overflow-wrap: anywhere;
+}
+
+.cache-block.lru {
+    border-color: #fbbf24;
+    background: #422006;
+}
+
+.cache-block.mru {
+    border-color: #86efac;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+    margin: 15px 0;
+}
+
+.stat-box {
+    background: #0b1020;
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    padding: 15px;
+    min-width: 0;
+}
+
+.stat-box span {
+    display: block;
+    color: var(--muted);
+    font-size: 13px;
+}
+
+.stat-box strong {
+    display: block;
+    font-size: clamp(19px, 3vw, 27px);
+    color: var(--blue);
+    overflow-wrap: anywhere;
+}
+
+.history-wrapper {
+    overflow-x: auto;
+    margin-top: 12px;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+th, td {
+    border: 1px solid var(--border);
+    padding: 10px;
+    text-align: left;
+    white-space: nowrap;
+}
+
+th { background: #263553; color: var(--blue); }
+tbody tr:nth-child(even) { background: #202d49; }
+.hit { color: var(--green); font-weight: bold; }
+.miss { color: var(--red); font-weight: bold; }
+
+/* =========================================
+   AUTOMATIC PATTERNS
+========================================= */
+
+.pattern-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.pattern-buttons button { flex: 1 1 130px; }
+
+.pattern-description {
+    padding: 12px;
+    background: #0b1020;
+    border-radius: 8px;
+    color: var(--muted);
+    margin-top: 14px;
+}
+
+/* =========================================
+   MINI QUIZ
+========================================= */
+
+.quiz-question {
+    background: #0b1020;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 15px;
+    margin: 15px 0;
+}
+
+.quiz-question label {
+    display: block;
+    padding: 5px 0;
+    cursor: pointer;
+}
+
+.quiz-question input { accent-color: #0284c7; }
+
+.quiz-feedback {
+    font-weight: bold;
+    margin-top: 8px;
+}
+
+.correct { color: var(--green); }
+.incorrect { color: var(--red); }
+
+footer {
+    border-top: 1px solid var(--border);
+    text-align: center;
+    color: var(--muted);
+    padding: 25px;
+    font-size: 13px;
+}
+
+@media (max-width: 650px) {
+    main { padding: 10px; }
+    .card { padding: 15px; }
+    .hierarchy-level,
+    .inline-details { width: 100%; }
+    .stats-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .guide-content { padding: 13px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        scroll-behavior: auto !important;
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+</style>
+</head>
+
+<body>
+
+<header>
+    <h1>MemoryLab</h1>
+    <p>An Interactive Computer Memory Hierarchy and Cache Simulator</p>
+</header>
+
+<nav aria-label="Main navigation">
+    <a href="#hierarchy">Memory Hierarchy</a>
+    <a href="#guide">Guided Tour</a>
+    <a href="#simulator">Cache Simulator</a>
+    <a href="#patterns">Access Patterns</a>
+    <a href="#quiz">Mini Quiz</a>
+    <a href="#references">References</a>
+</nav>
+
+<main>
+
+<!-- =====================================
+     1. INTERACTIVE MEMORY HIERARCHY
+====================================== -->
+
+<section class="card" id="hierarchy">
+    <h2>1. Interactive Memory Hierarchy</h2>
+
+    <p>
+        Explore how a computer stores and accesses information.
+        Click any coloured level to expand its explanation directly
+        beneath the box. Click it again to collapse it.
+    </p>
+
+    <div class="hierarchy-level cpu"
+         tabindex="0"
+         role="button"
+         aria-expanded="false"
+         aria-controls="details-cpu"
+         data-memory="cpu">
+        <div class="level-heading">
+            <span>CPU</span>
+            <span class="level-icon" aria-hidden="true">⌄</span>
+        </div>
+        <span>Executes instructions and processes data</span>
+        <small>Click to learn more</small>
+    </div>
+
+    <div class="arrow" aria-hidden="true">↕</div>
+
+    <div class="hierarchy-level registers"
+         tabindex="0"
+         role="button"
+         aria-expanded="false"
+         aria-controls="details-registers"
+         data-memory="registers">
+        <div class="level-heading">
+            <span>CPU Registers</span>
+            <span class="level-icon" aria-hidden="true">⌄</span>
+        </div>
+        <span>Fast, small storage locations inside the processor</span>
+        <small>Click to learn more</small>
+    </div>
+
+    <div class="arrow" aria-hidden="true">↕</div>
+
+    <div class="hierarchy-level cache-level"
+         tabindex="0"
+         role="button"
+         aria-expanded="false"
+         aria-controls="details-cache"
+         data-memory="cache">
+        <div class="level-heading">
+            <span>Cache Memory — L1 / L2 / L3</span>
+            <span class="level-icon" aria-hidden="true">⌄</span>
+        </div>
+        <span>Keeps copies of recently or frequently used data</span>
+        <small>Click to learn more</small>
+    </div>
+
+    <div class="arrow" aria-hidden="true">↕</div>
+
+    <div class="hierarchy-level ram"
+         tabindex="0"
+         role="button"
+         aria-expanded="false"
+         aria-controls="details-ram"
+         data-memory="ram">
+        <div class="level-heading">
+            <span>Main Memory — RAM</span>
+            <span class="level-icon" aria-hidden="true">⌄</span>
+        </div>
+        <span>Holds active programs and their data</span>
+        <small>Click to learn more</small>
+    </div>
+
+    <div class="arrow" aria-hidden="true">↕</div>
+
+    <div class="hierarchy-level storage"
+         tabindex="0"
+         role="button"
+         aria-expanded="false"
+         aria-controls="details-storage"
+         data-memory="storage">
+        <div class="level-heading">
+            <span>Secondary Storage — SSD / HDD</span>
+            <span class="level-icon" aria-hidden="true">⌄</span>
+        </div>
+        <span>Retains files and programs when power is off</span>
+        <small>Click to learn more</small>
+    </div>
+
+    <p class="note">
+        The hierarchy is conceptual. Actual hardware designs and
+        memory arrangements vary between computers.
+    </p>
+</section>
+
+<!-- =====================================
+     2. MEMORY HIERARCHY THEORY
+====================================== -->
+
+<section class="card">
+    <h2>2. Understanding Memory Hierarchy</h2>
+
+    <h3>CPU Registers</h3>
+    <p>
+        Registers are small storage locations inside the processor.
+        They temporarily hold operands, addresses, and intermediate results.
+    </p>
+
+    <h3>Cache Memory</h3>
+    <p>
+        Cache stores copies of data and instructions that may be needed
+        again. A cache hit means the requested block is present.
+        A cache miss means it is absent from the cache.
+    </p>
+
+    <h3>Main Memory (RAM)</h3>
+    <p>
+        RAM holds active programs and data. It is generally slower
+        to access than cache and loses its contents when power is removed.
+    </p>
+
+    <h3>Secondary Storage</h3>
+    <p>
+        SSDs and HDDs retain files and applications even when the
+        computer is turned off. They generally provide greater capacity
+        than RAM but have higher access latency.
+    </p>
+
+    <h3>Locality of Reference</h3>
+    <p>
+        <strong>Temporal locality:</strong> recently accessed data may
+        be accessed again soon.
+    </p>
+    <p>
+        <strong>Spatial locality:</strong> data near a recently accessed
+        location may be accessed soon.
+    </p>
+</section>
+
+<!-- =====================================
+     3. GUIDED SIMULATOR WALKTHROUGH
+====================================== -->
+
+<section class="card guide-card" id="guide">
+    <div class="guide-top">
+        <div>
+            <h2>3. First-Time Guided Tour</h2>
+            <p class="muted">
+                Learn the simulator by trying a few memory accesses.
+            </p>
+        </div>
+        <button id="guideRestart" class="secondary" type="button">
+            Restart Tour
+        </button>
+    </div>
+
+    <div class="guide-progress"
+         role="progressbar"
+         aria-label="Guided tour progress"
+         aria-valuemin="0"
+         aria-valuemax="4"
+         aria-valuenow="1"
+         id="guideProgress">
+        <div class="guide-progress-bar" id="guideProgressBar"></div>
+    </div>
+
+    <div class="guide-content" aria-live="polite">
+        <span class="guide-step-label" id="guideStepLabel">
+            STEP 1 OF 4
+        </span>
+
+        <h3 id="guideTitle">Welcome to MemoryLab!</h3>
+
+        <p id="guideText">
+            Your CPU requests data from memory. The cache keeps recently
+            used blocks close to the CPU, making repeated accesses faster.
+            This tour will show you how that works.
+        </p>
+
+        <div class="guide-action" id="guideAction">
+            <strong>What to do</strong>
+            <p id="guideActionText">
+                Start by understanding the cache capacity and the memory
+                block input in the simulator below.
+            </p>
+        </div>
+    </div>
+
+    <div class="guide-actions">
+        <button type="button" class="secondary" id="guideBack">
+            ← Back
+        </button>
+
+        <button type="button" id="guideNext">
+            Next →
+        </button>
+
+        <button type="button" class="secondary" id="guideSkip">
+            Skip Tour
+        </button>
+    </div>
+
+    <div class="guide-footer">
+        <span id="guideStatus">Ready to learn</span>
+        <span>Estimated time: 1–2 minutes</span>
+    </div>
+</section>
+
+<!-- =====================================
+     4. INTERACTIVE CACHE SIMULATOR
+====================================== -->
+
+<section class="card" id="simulator">
+    <h2>4. Interactive Cache Simulator</h2>
+
+    <p>
+        Enter a memory block to see whether it is found in the cache.
+        This educational model uses a fully associative cache and
+        Least Recently Used (LRU) replacement.
+    </p>
+
+    <label for="cacheSize">Cache capacity:</label>
+    <select id="cacheSize">
+        <option value="2">2 blocks</option>
+        <option value="4" selected>4 blocks</option>
+        <option value="8">8 blocks</option>
+    </select>
+
+    <br>
+
+    <label for="memoryBlock">Memory block (0–15):</label>
+    <input type="number"
+           id="memoryBlock"
+           min="0"
+           max="15"
+           step="1"
+           value="3">
+
+    <button id="accessButton" type="button">Access Memory</button>
+    <button id="resetButton" class="secondary" type="button">Reset</button>
+
+    <h3 id="result" aria-live="polite">Ready to simulate!</h3>
+    <p id="explanation" aria-live="polite">
+        Enter a block and select Access Memory.
+    </p>
+
+    <h3>Cache Contents (LRU → MRU)</h3>
+    <div id="cacheContents" class="cache-contents">Cache is empty</div>
+
+    <p class="muted">
+        <strong>LRU</strong> means Least Recently Used — the block that
+        has gone the longest without being accessed.
+        <strong>MRU</strong> means Most Recently Used — the block
+        accessed most recently.
+    </p>
+
+    <h3>Performance Statistics</h3>
+
+    <div class="stats-grid">
+        <div class="stat-box">
+            <span>Total accesses</span>
+            <strong id="total">0</strong>
+        </div>
+
+        <div class="stat-box">
+            <span>Cache hits</span>
+            <strong id="hits">0</strong>
+        </div>
+
+        <div class="stat-box">
+            <span>Cache misses</span>
+            <strong id="misses">0</strong>
+        </div>
+
+        <div class="stat-box">
+            <span>Hit rate</span>
+            <strong id="hitRate">0%</strong>
+        </div>
+
+        <div class="stat-box">
+            <span>Miss rate</span>
+            <strong id="missRate">0%</strong>
+        </div>
+
+        <div class="stat-box">
+            <span>Average access time</span>
+            <strong id="averageTime">0 ns</strong>
+        </div>
+    </div>
+
+    <p class="muted">
+        <strong>Timing assumptions:</strong> cache hit = 5 ns;
+        cache miss = 85 ns, including a 5 ns cache lookup and an
+        illustrative 80 ns RAM access. These are simulation values,
+        not measured hardware benchmarks.
+    </p>
+
+    <h3>Memory Access History</h3>
+
+    <div class="history-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Access #</th>
+                    <th>Block</th>
+                    <th>Result</th>
+                    <th>Cache Contents (LRU → MRU)</th>
+                    <th>Time (ns)</th>
+                </tr>
+            </thead>
+            <tbody id="historyBody">
+                <tr><td colspan="5">No accesses yet.</td></tr>
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<!-- =====================================
+     5. AUTOMATIC ACCESS PATTERNS
+====================================== -->
+
+<section class="card" id="patterns">
+    <h2>5. Automatic Access Patterns</h2>
+
+    <p>
+        Run a predefined sequence of memory-block requests.
+        Each pattern resets the current simulation first.
+    </p>
+
+    <div class="pattern-buttons">
+        <button type="button" data-pattern="repeated">Repeated Access</button>
+        <button type="button" data-pattern="nearby">Nearby Blocks</button>
+        <button type="button" data-pattern="scattered">Scattered Access</button>
+    </div>
+
+    <div class="pattern-description"
+         id="patternDescription"
+         aria-live="polite">
+        Choose a pattern to start an automatic simulation.
+    </div>
+</section>
+
+<!-- =====================================
+     6. MINI QUIZ
+====================================== -->
+
+<section class="card" id="quiz">
+    <h2>6. Mini Quiz</h2>
+    <p>Answer all five questions and check your score.</p>
+
+    <form id="quizForm">
+
+        <div class="quiz-question">
+            <strong>1. What is a cache hit?</strong>
+            <label><input type="radio" name="q1" value="a"> Data is found in the cache.</label>
+            <label><input type="radio" name="q1" value="b"> Data is permanently saved to an SSD.</label>
+            <label><input type="radio" name="q1" value="c"> The cache has been switched off.</label>
+            <div class="quiz-feedback" id="feedback1"></div>
+        </div>
+
+        <div class="quiz-question">
+            <strong>2. Which memory is generally the fastest?</strong>
+            <label><input type="radio" name="q2" value="a"> HDD</label>
+            <label><input type="radio" name="q2" value="b"> RAM</label>
+            <label><input type="radio" name="q2" value="c"> CPU registers</label>
+            <div class="quiz-feedback" id="feedback2"></div>
+        </div>
+
+        <div class="quiz-question">
+            <strong>3. What does LRU stand for?</strong>
+            <label><input type="radio" name="q3" value="a"> Least Recently Used</label>
+            <label><input type="radio" name="q3" value="b"> Last RAM Unit</label>
+            <label><input type="radio" name="q3" value="c"> Lowest Register Usage</label>
+            <div class="quiz-feedback" id="feedback3"></div>
+        </div>
+
+        <div class="quiz-question">
+            <strong>4. Which locality means recently used data may be used again?</strong>
+            <label><input type="radio" name="q4" value="a"> Spatial locality</label>
+            <label><input type="radio" name="q4" value="b"> Temporal locality</label>
+            <label><input type="radio" name="q4" value="c"> Secondary locality</label>
+            <div class="quiz-feedback" id="feedback4"></div>
+        </div>
+
+        <div class="quiz-question">
+            <strong>5. What happens on a cache miss in this simulator?</strong>
+            <label><input type="radio" name="q5" value="a"> The block is fetched from simulated RAM.</label>
+            <label><input type="radio" name="q5" value="b"> The CPU permanently stops.</label>
+            <label><input type="radio" name="q5" value="c"> All memory is erased.</label>
+            <div class="quiz-feedback" id="feedback5"></div>
+        </div>
+
+        <button type="submit">Check My Answers</button>
+        <button type="button" id="quizReset" class="secondary">Try Again</button>
+    </form>
+
+    <h3 id="quizScore" aria-live="polite"></h3>
+</section>
+
+<!-- =====================================
+     7. FORMULAS AND REFERENCES
+====================================== -->
+
+<section class="card" id="references">
+    <h2>7. Formulas and Assumptions</h2>
+
+    <h3>Cache Hit Rate</h3>
+    <p>Hit rate = (Number of hits ÷ Total accesses) × 100%</p>
+
+    <h3>Cache Miss Rate</h3>
+    <p>Miss rate = (Number of misses ÷ Total accesses) × 100%</p>
+
+    <h3>Average Access Time</h3>
+    <p>
+        Average time = [(Hits × Hit time) + (Misses × Miss time)]
+        ÷ Total accesses
+    </p>
+
+    <h3>Simulator Model</h3>
+    <ul>
+        <li>Memory block IDs range from 0 to 15.</li>
+        <li>The cache is fully associative: any block can occupy any cache slot.</li>
+        <li>LRU replacement removes the least recently used block when full.</li>
+        <li>Hit time is 5 ns and miss time is 85 ns in this educational model.</li>
+        <li>This model does not simulate byte addresses, cache lines, write policies, or multicore cache coherence.</li>
+    </ul>
+
+    <h3>References for Further Reading</h3>
+    <ul>
+        <li>
+            <a href="https://www.cs.cornell.edu/courses/cs3410/"
+               target="_blank" rel="noopener noreferrer">
+                Cornell University — Computer Systems
+            </a>
+        </li>
+        <li>
+            <a href="https://www.cs.umd.edu/class/sum2003/cmsc311/Notes/Memory/"
+               target="_blank" rel="noopener noreferrer">
+                University of Maryland — Memory Systems Notes
+            </a>
+        </li>
+        <li>
+            <a href="https://www.geeksforgeeks.org/cache-memory/"
+               target="_blank" rel="noopener noreferrer">
+                GeeksforGeeks — Cache Memory
+            </a>
+        </li>
+    </ul>
+
+    <p class="muted">
+        Review the reference materials and cite the sources you actually consult.
+    </p>
+</section>
+
+</main>
+
+<footer>
+    MemoryLab | Computer Organization and Architecture | Interactive Learning Project
+</footer>
+
+<script>
+"use strict";
+
+// ============================================
+// 1. INTERACTIVE MEMORY HIERARCHY
+// ============================================
+
+const memoryInformation = {
+    cpu: {
+        title: "CPU — Central Processing Unit",
+        description:
+            "The CPU executes program instructions and coordinates computer operations.",
+        function:
+            "Performs arithmetic, logic, control, and data-processing operations.",
+        speed:
+            "Processing speed depends on the processor. The CPU uses registers and cache for fast data access.",
+        capacity:
+            "Not measured as storage capacity. Registers and caches hold data used by the processor.",
+        example:
+            "Calculating a sum or executing instructions in a web browser."
+    },
+
+    registers: {
+        title: "CPU Registers",
+        description:
+            "Registers are small storage locations built directly into the processor.",
+        function:
+            "Hold operands, addresses, instruction information, and intermediate results.",
+        speed:
+            "Typically the fastest storage directly accessible to the CPU.",
+        capacity:
+            "Very small. Individual registers commonly hold 32 or 64 bits, depending on architecture.",
+        example:
+            "A register temporarily holds a number while an addition is performed."
+    },
+
+    cache: {
+        title: "Cache Memory — L1, L2 and L3",
+        description:
+            "Cache keeps copies of data and instructions so the CPU can access them faster than retrieving them from RAM.",
+        function:
+            "Reduces average memory-access latency by exploiting temporal and spatial locality.",
+        speed:
+            "L1 is generally fastest, followed by L2 and L3. Actual timings depend on the processor.",
+        capacity:
+            "L1 is often tens of KB, L2 can range from hundreds of KB to several MB, and L3 can range from several MB to tens of MB. Designs vary.",
+        example:
+            "Data reused inside a loop may be found in cache, reducing the need to access RAM."
+    },
+
+    ram: {
+        title: "Main Memory — RAM",
+        description:
+            "RAM stores programs and data currently being used by the operating system and applications.",
+        function:
+            "Supplies instructions and data to the CPU and provides working space for applications.",
+        speed:
+            "Slower to access than registers and cache, but generally much faster than SSD storage.",
+        capacity:
+            "Common personal-computer configurations range from 8 GB to 64 GB or more.",
+        example:
+            "An open browser, its tabs, and a running code editor use RAM."
+    },
+
+    storage: {
+        title: "Secondary Storage — SSD / HDD",
+        description:
+            "Secondary storage retains files and applications even when the computer is switched off.",
+        function:
+            "Stores the operating system, documents, applications, and other long-term data.",
+        speed:
+            "Generally has higher access latency than RAM. SSDs are typically faster than HDDs.",
+        capacity:
+            "Common devices range from hundreds of GB to multiple TB.",
+        example:
+            "Your index.html file remains saved after the browser closes."
+    }
+};
+
+function toggleMemoryDetails(level) {
+    const selectedBox = document.querySelector(
+        '[data-memory="' + level + '"]'
+    );
+
+    const selectedDetails = document.getElementById(
+        "details-" + level
+    );
+
+    if (!selectedBox || !selectedDetails) return;
+
+    const isOpen = selectedBox.getAttribute("aria-expanded") === "true";
+
+    // Close all open levels before opening another.
+    closeAllMemoryDetails();
+
+    // Clicking the already-open box simply collapses it.
+    if (isOpen) return;
+
+    const info = memoryInformation[level];
+    if (!info) return;
+
+    selectedDetails.innerHTML = "";
+
+    const heading = document.createElement("h3");
+    heading.textContent = info.title;
+    selectedDetails.appendChild(heading);
+
+    const description = document.createElement("p");
+    description.textContent = info.description;
+    selectedDetails.appendChild(description);
+
+    const fields = [
+        ["Function", info.function],
+        ["Speed", info.speed],
+        ["Capacity", info.capacity],
+        ["Example", info.example]
+    ];
+
+    fields.forEach(function(field) {
+        const paragraph = document.createElement("p");
+        const strong = document.createElement("strong");
+
+        strong.textContent = field[0] + ": ";
+        paragraph.appendChild(strong);
+        paragraph.appendChild(document.createTextNode(field[1]));
+
+        selectedDetails.appendChild(paragraph);
+    });
+
+    selectedDetails.hidden = false;
+    selectedBox.setAttribute("aria-expanded", "true");
+
+    const hint = selectedBox.querySelector("small");
+    if (hint) hint.textContent = "Click to collapse ↑";
+}
+
+function closeAllMemoryDetails() {
+    document.querySelectorAll("[data-memory]").forEach(function(box) {
+        const level = box.dataset.memory;
+        const details = document.getElementById("details-" + level);
+
+        box.setAttribute("aria-expanded", "false");
+
+        const hint = box.querySelector("small");
+        if (hint) hint.textContent = "Click to learn more";
+
+        if (details) {
+            details.hidden = true;
+            details.replaceChildren();
+        }
+    });
+}
+
+// Create one inline details container for each level.
+// The containers start hidden and are placed immediately after each box.
+document.querySelectorAll("[data-memory]").forEach(function(box) {
+    const details = document.createElement("div");
+    const level = box.dataset.memory;
+
+    details.id = "details-" + level;
+    details.className = "inline-details";
+    details.hidden = true;
+    details.setAttribute("aria-live", "polite");
+
+    box.insertAdjacentElement("afterend", details);
+
+    box.addEventListener("click", function() {
+        toggleMemoryDetails(level);
+    });
+
+    box.addEventListener("keydown", function(event) {
+        if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            toggleMemoryDetails(level);
+        }
+    });
+});
+
+// ============================================
+// 2. CACHE SIMULATOR STATE
+// ============================================
+
+let cache = [];
+let total = 0;
+let hits = 0;
+let misses = 0;
+let history = [];
+
+const HIT_TIME = 5;
+const RAM_TIME = 80;
+const MISS_TIME = HIT_TIME + RAM_TIME;
+
+const cacheSizeInput = document.getElementById("cacheSize");
+const memoryBlockInput = document.getElementById("memoryBlock");
+
+function setResult(message, explanation) {
+    document.getElementById("result").textContent = message;
+    document.getElementById("explanation").textContent = explanation;
+}
+
+// ============================================
+// 3. RESET SIMULATOR
+// ============================================
+
+function resetSimulation(message = "Ready to simulate!") {
+    cache = [];
+    total = 0;
+    hits = 0;
+    misses = 0;
+    history = [];
+
+    setResult(
+        message,
+        "Enter a memory block and click Access Memory."
+    );
+
+    updateDisplay();
+    updateHistory();
+}
+
+// ============================================
+// 4. PROCESS ONE MEMORY ACCESS
+// ============================================
+
+function accessBlock(block) {
+    const capacity = Number(cacheSizeInput.value);
+
+    total++;
+
+    const index = cache.indexOf(block);
+    let accessTime;
+    let explanationText;
+    let resultText;
+
+    if (index !== -1) {
+        // HIT: move the block to the most-recently-used position.
+        hits++;
+        accessTime = HIT_TIME;
+
+        cache.splice(index, 1);
+        cache.push(block);
+
+        resultText = "HIT";
+        explanationText =
+            "Block " + block +
+            " was already in cache. No RAM fetch was needed.";
+    } else {
+        // MISS: fetch the block from simulated RAM.
+        misses++;
+        accessTime = MISS_TIME;
+
+        resultText = "MISS";
+        explanationText =
+            "Block " + block +
+            " was not in cache. The block was fetched from simulated RAM.";
+
+        // Evict the least recently used block if the cache is full.
+        if (cache.length >= capacity) {
+            const evicted = cache.shift();
+
+            explanationText +=
+                " Block " + evicted +
+                " was evicted because it was the least recently used.";
+        }
+
+        cache.push(block);
+    }
+
+    history.push({
+        number: total,
+        block: block,
+        result: resultText,
+        contents: [...cache],
+        time: accessTime
+    });
+
+    setResult(
+        resultText === "HIT" ? "CACHE HIT!" : "CACHE MISS!",
+        explanationText + " Access time: " + accessTime + " ns."
+    );
+
+    updateDisplay();
+    updateHistory();
+
+    return resultText;
+}
+
+// ============================================
+// 5. UPDATE CACHE DISPLAY AND STATISTICS
+// ============================================
+
+function updateDisplay() {
+    const cacheContents = document.getElementById("cacheContents");
+    cacheContents.replaceChildren();
+
+    if (cache.length === 0) {
+        cacheContents.textContent = "Cache is empty";
+    } else {
+        cache.forEach(function(block, index) {
+            const item = document.createElement("div");
+            item.className = "cache-block";
+
+            let label = "";
+
+            if (index === 0) {
+                label = " (LRU)";
+                item.classList.add("lru");
+            }
+
+            if (index === cache.length - 1) {
+                if (label) {
+                    label += " / MRU";
+                } else {
+                    label = " (MRU)";
+                }
+                item.classList.add("mru");
+            }
+
+            item.textContent = "Block " + block + label;
+            cacheContents.appendChild(item);
+        });
+    }
+
+    document.getElementById("total").textContent = total;
+    document.getElementById("hits").textContent = hits;
+    document.getElementById("misses").textContent = misses;
+
+    const hitRate = total === 0 ? 0 : (hits / total) * 100;
+    const missRate = total === 0 ? 0 : (misses / total) * 100;
+
+    const averageTime = total === 0
+        ? 0
+        : (hits * HIT_TIME + misses * MISS_TIME) / total;
+
+    document.getElementById("hitRate").textContent =
+        hitRate.toFixed(1) + "%";
+
+    document.getElementById("missRate").textContent =
+        missRate.toFixed(1) + "%";
+
+    document.getElementById("averageTime").textContent =
+        averageTime.toFixed(1) + " ns";
+}
+
+// ============================================
+// 6. ACCESS HISTORY TABLE
+// ============================================
+
+function updateHistory() {
+    const body = document.getElementById("historyBody");
+    body.replaceChildren();
+
+    if (history.length === 0) {
+        const row = body.insertRow();
+        const cell = row.insertCell();
+
+        cell.colSpan = 5;
+        cell.textContent = "No accesses yet.";
+        return;
+    }
+
+    history.forEach(function(entry) {
+        const row = body.insertRow();
+
+        row.insertCell().textContent = entry.number;
+        row.insertCell().textContent = entry.block;
+
+        const resultCell = row.insertCell();
+        resultCell.textContent = entry.result;
+        resultCell.className =
+            entry.result === "HIT" ? "hit" : "miss";
+
+        row.insertCell().textContent =
+            entry.contents.join(" → ");
+
+        row.insertCell().textContent = entry.time;
+    });
+}
+
+// ============================================
+// 7. MANUAL SIMULATOR BUTTONS
+// ============================================
+
+document.getElementById("accessButton").addEventListener("click", function() {
+    const rawValue = memoryBlockInput.value;
+    const block = Number(rawValue);
+
+    if (
+        rawValue.trim() === "" ||
+        !Number.isInteger(block) ||
+        block < 0 ||
+        block > 15
+    ) {
+        setResult(
+            "Invalid memory block",
+            "Enter a whole number from 0 to 15."
+        );
+        return;
+    }
+
+    accessBlock(block);
+});
+
+memoryBlockInput.addEventListener("keydown", function(event) {
+    if (event.key === "Enter") {
+        document.getElementById("accessButton").click();
+    }
+});
+
+document.getElementById("resetButton").addEventListener("click", function() {
+    resetSimulation();
+});
+
+cacheSizeInput.addEventListener("change", function() {
+    resetSimulation("Cache capacity changed");
+
+    document.getElementById("explanation").textContent =
+        "The cache and statistics have been reset. Start a new simulation.";
+});
+
+// ============================================
+// 8. AUTOMATIC ACCESS PATTERNS
+// ============================================
+
+const patterns = {
+    repeated: {
+        name: "Repeated Access",
+        sequence: [1, 2, 1, 2, 1, 2, 1, 2],
+        description:
+            "The same two blocks are requested repeatedly. " +
+            "Once they enter the cache, later requests should mostly hit."
+    },
+
+    nearby: {
+        name: "Nearby Blocks",
+        sequence: [0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3],
+        description:
+            "A small group of nearby-numbered blocks is accessed repeatedly. " +
+            "This demonstrates reuse of a compact working set, but does not " +
+            "simulate byte-level spatial locality."
+    },
+
+    scattered: {
+        name: "Scattered Access",
+        sequence: [1, 8, 3, 12, 5, 14, 2, 9, 1, 8, 3, 12],
+        description:
+            "Requests jump among different blocks. Results depend on cache " +
+            "capacity and which blocks remain available under LRU."
+    }
+};
+
+function runPattern(patternKey) {
+    const pattern = patterns[patternKey];
+    if (!pattern) return;
+
+    resetSimulation(pattern.name + " pattern running");
+
+    document.getElementById("patternDescription").textContent =
+        pattern.description + " Sequence: " +
+        pattern.sequence.join(" → ") + ".";
+
+    pattern.sequence.forEach(function(block) {
+        accessBlock(block);
+    });
+
+    document.getElementById("result").textContent =
+        pattern.name + " complete";
+
+    document.getElementById("explanation").textContent =
+        "Processed " + pattern.sequence.length +
+        " requests using a " + cacheSizeInput.value +
+        "-block cache and LRU replacement.";
+}
+
+document.querySelectorAll("[data-pattern]").forEach(function(button) {
+    button.addEventListener("click", function() {
+        runPattern(button.dataset.pattern);
+    });
+});
+
+// ============================================
+// 9. GUIDED WALKTHROUGH LOGIC
+// ============================================
+
+const guideSteps = [
+    {
+        title: "Welcome to MemoryLab!",
+        text:
+            "Your CPU requests data from memory. The cache keeps recently " +
+            "used blocks close to the CPU, making repeated accesses faster. " +
+            "This tour will show you how that works.",
+        actionTitle: "What to do",
+        action:
+            "First, look at the cache capacity and memory block controls below. " +
+            "We will use block 3 for our example.",
+        target: null,
+        button: "Next: Choose capacity →",
+        status: "Introduction"
+    },
+
+    {
+        title: "Step 1: Choose your cache capacity",
+        text:
+            "Cache capacity determines how many different blocks can fit " +
+            "in the simulated cache at one time. We will use four blocks " +
+            "so there is enough room for our example.",
+        actionTitle: "Try it",
+        action:
+            "Select 4 blocks in the Cache capacity menu. Changing capacity " +
+            "resets the current simulation.",
+        target: "cacheSize",
+        button: "Next: First access →",
+        status: "Choose the capacity"
+    },
+
+    {
+        title: "Step 2: Perform your first access",
+        text:
+            "We will request memory block 3. Because the cache starts empty, " +
+            "the block is not present. This produces a cache miss, and our " +
+            "model fetches the block from simulated RAM.",
+        actionTitle: "Try it",
+        action:
+            "Click the button below to access block 3. The first access " +
+            "should produce a MISS and add block 3 to the cache.",
+        target: "accessButton",
+        button: "Next: Repeat the access →",
+        status: "Cause the first miss"
+    },
+
+    {
+        title: "Step 3: Access block 3 again",
+        text:
+            "Block 3 is now in the cache. Requesting it again produces a " +
+            "cache hit, so no RAM fetch is needed in this model. A hit takes " +
+            "5 ns, compared with 85 ns for a miss.",
+        actionTitle: "Try it",
+        action:
+            "Access block 3 once more. The result should be HIT. Compare " +
+            "the time and cache statistics with the previous access.",
+        target: "accessButton",
+        button: "Next: Understand results →",
+        status: "Observe the cache hit"
+    },
+
+    {
+        title: "Step 4: Understand your results",
+        text:
+            "The cache now contains block 3. You should have two accesses, " +
+            "one miss, and one hit. That gives a 50% hit rate and an average " +
+            "access time of 45 ns under our illustrative timing assumptions.",
+        actionTitle: "What the numbers mean",
+        action:
+            "Hit rate = hits ÷ total accesses × 100. Average access time " +
+            "= (hits × 5 ns + misses × 85 ns) ÷ total accesses. " +
+            "Try more blocks, or explore the automatic patterns to see LRU replacement.",
+        target: "averageTime",
+        button: "Finish tour ✓",
+        status: "Tour complete"
+    }
+];
+
+let guideStep = 0;
+let guideSkipped = false;
+let guideHasRunFirstAccess = false;
+let guideHasRunSecondAccess = false;
+let guidePreviousHighlight = null;
+
+const guideStepLabel = document.getElementById("guideStepLabel");
+const guideTitle = document.getElementById("guideTitle");
+const guideText = document.getElementById("guideText");
+const guideAction = document.getElementById("guideAction");
+const guideActionText = document.getElementById("guideActionText");
+const guideProgress = document.getElementById("guideProgress");
+const guideProgressBar = document.getElementById("guideProgressBar");
+const guideNext = document.getElementById("guideNext");
+const guideBack = document.getElementById("guideBack");
+const guideSkip = document.getElementById("guideSkip");
+const guideStatus = document.getElementById("guideStatus");
+
+function clearGuideHighlight() {
+    document.querySelectorAll(".guide-highlight").forEach(function(element) {
+        element.classList.remove("guide-highlight");
+    });
+
+    guidePreviousHighlight = null;
+}
+
+function renderGuide() {
+    const step = guideSteps[guideStep];
+    if (!step) return;
+
+    clearGuideHighlight();
+
+    guideStepLabel.textContent =
+        guideStep === 0
+            ? "WELCOME"
+            : guideStep === guideSteps.length - 1
+                ? "FINAL STEP"
+                : "STEP " + guideStep + " OF " + (guideSteps.length - 1);
+
+    guideTitle.textContent = step.title;
+    guideText.textContent = step.text;
+    guideActionText.textContent = step.action;
+    guideStatus.textContent = step.status;
+
+    guideProgressBar.style.width =
+        ((guideStep + 1) / guideSteps.length * 100) + "%";
+
+    guideProgress.setAttribute("aria-valuenow", guideStep + 1);
+
+    guideBack.disabled = guideStep === 0;
+
+    guideNext.textContent = step.button;
+
+    if (guideStep === guideSteps.length - 1) {
+        guideStatus.className = "guide-complete";
+        guideSkip.hidden = true;
+    } else {
+        guideStatus.className = "";
+        guideSkip.hidden = false;
+    }
+
+    if (step.target) {
+        let targetElement;
+
+        if (step.target === "averageTime") {
+            targetElement = document.getElementById("averageTime")
+                .closest(".stat-box");
+        } else {
+            targetElement = document.getElementById(step.target);
+        }
+
+        if (targetElement) {
+            targetElement.classList.add("guide-highlight");
+            guidePreviousHighlight = targetElement;
+        }
+    }
+}
+
+function startGuide() {
+    guideStep = 0;
+    guideSkipped = false;
+    guideHasRunFirstAccess = false;
+    guideHasRunSecondAccess = false;
+
+    clearGuideHighlight();
+    renderGuide();
+}
+
+function advanceGuide() {
+    // Step 1: capacity selection.
+    if (guideStep === 1) {
+        if (Number(cacheSizeInput.value) !== 4) {
+            cacheSizeInput.value = "4";
+            resetSimulation("Guided tour: cache capacity set to 4 blocks");
+        }
+    }
+
+    // Step 2: perform the first access.
+    if (guideStep === 2 && !guideHasRunFirstAccess) {
+        memoryBlockInput.value = "3";
+        accessBlock(3);
+        guideHasRunFirstAccess = true;
+    }
+
+    // Step 3: repeat the same access.
+    if (guideStep === 3 && !guideHasRunSecondAccess) {
+        // Ensure the example begins with the first access if the user
+        // reached this step without following the earlier guided steps.
+        if (!guideHasRunFirstAccess) {
+            memoryBlockInput.value = "3";
+            accessBlock(3);
+            guideHasRunFirstAccess = true;
+        }
+
+        memoryBlockInput.value = "3";
+        accessBlock(3);
+        guideHasRunSecondAccess = true;
+    }
+
+    // Finish the tour.
+    if (guideStep === guideSteps.length - 1) {
+        clearGuideHighlight();
+        guideSkipped = true;
+
+        guideTitle.textContent = "You're ready to explore!";
+        guideText.textContent =
+            "You have completed the introduction. Experiment with different " +
+            "blocks, cache capacities, and automatic access patterns to " +
+            "understand how cache hits, misses, and LRU replacement work.";
+
+        guideAction.hidden = true;
+        guideStepLabel.textContent = "COMPLETED";
+        guideProgressBar.style.width = "100%";
+        guideProgress.setAttribute("aria-valuenow", guideSteps.length);
+
+        guideNext.textContent = "Start Tour Again";
+        guideBack.disabled = true;
+        guideSkip.hidden = true;
+        guideStatus.textContent = "Tour completed!";
+        guideStatus.className = "guide-complete";
+
+        return;
+    }
+
+    guideStep++;
+    guideAction.hidden = false;
+    renderGuide();
+}
+
+guideNext.addEventListener("click", function() {
+    if (guideSkipped || guideStep === guideSteps.length - 1) {
+        startGuide();
+        return;
+    }
+
+    advanceGuide();
+});
+
+guideBack.addEventListener("click", function() {
+    if (guideStep <= 0) return;
+
+    guideStep--;
+    guideAction.hidden = false;
+    renderGuide();
+});
+
+guideSkip.addEventListener("click", function() {
+    guideSkipped = true;
+    clearGuideHighlight();
+
+    guideTitle.textContent = "Tour skipped";
+    guideText.textContent =
+        "No problem! You can explore MemoryLab freely. Use the cache controls " +
+        "to access memory blocks, repeat requests, and compare cache hits and misses.";
+
+    guideAction.hidden = true;
+    guideStepLabel.textContent = "SKIPPED";
+    guideProgressBar.style.width = "100%";
+    guideProgress.setAttribute("aria-valuenow", guideSteps.length);
+
+    guideNext.textContent = "Start Tour Again";
+    guideBack.disabled = true;
+    guideSkip.hidden = true;
+    guideStatus.textContent = "Explore at your own pace";
+    guideStatus.className = "";
+});
+
+document.getElementById("guideRestart").addEventListener("click", function() {
+    startGuide();
+});
+
+// ============================================
+// 10. MINI QUIZ
+// ============================================
+
+const answers = {
+    q1: {
+        correct: "a",
+        explanation:
+            "A cache hit means the requested block is already in cache."
+    },
+    q2: {
+        correct: "c",
+        explanation:
+            "CPU registers are generally the fastest storage level listed."
+    },
+    q3: {
+        correct: "a",
+        explanation:
+            "LRU means Least Recently Used."
+    },
+    q4: {
+        correct: "b",
+        explanation:
+            "Temporal locality is the reuse of recently accessed data."
+    },
+    q5: {
+        correct: "a",
+        explanation:
+            "In this model, a miss fetches the requested block from simulated RAM."
+    }
+};
+
+document.getElementById("quizForm").addEventListener("submit", function(event) {
+    event.preventDefault();
+
+    let score = 0;
+
+    Object.keys(answers).forEach(function(question) {
+        const selected = document.querySelector(
+            'input[name="' + question + '"]:checked'
+        );
+
+        const feedback = document.getElementById(
+            "feedback" + question.substring(1)
+        );
+
+        if (selected && selected.value === answers[question].correct) {
+            score++;
+
+            feedback.textContent =
+                "Correct! " + answers[question].explanation;
+
+            feedback.className = "quiz-feedback correct";
+        } else {
+            feedback.textContent =
+                "Not quite. " + answers[question].explanation;
+
+            feedback.className = "quiz-feedback incorrect";
+        }
+    });
+
+    document.getElementById("quizScore").textContent =
+        "Your score: " + score + " / " +
+        Object.keys(answers).length;
+});
+
+document.getElementById("quizReset").addEventListener("click", function() {
+    document.getElementById("quizForm").reset();
+
+    document.querySelectorAll(".quiz-feedback").forEach(function(item) {
+        item.textContent = "";
+        item.className = "quiz-feedback";
+    });
+
+    document.getElementById("quizScore").textContent = "";
+});
+
+// ============================================
+// 11. INITIALISE THE PAGE
+// ============================================
+
+updateDisplay();
+updateHistory();
+startGuide();
+
+</script>
+</body>
+</html>
